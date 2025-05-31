@@ -13,6 +13,16 @@ The below definition combines technical simplicity with the best features of pre
 
 # DEFINITION
 
+Context
+
+https://uithub.com/janwilmake/flaredream
+https://uithub.com/janwilmake/github-oauth-middleware
+https://uithub.com/janwilmake/gists/blob/main/named-codeblocks.md
+https://openapisearch.com/openapi/cache.forgithub.com
+
+
+- put all source in the root, no src folder needed
+- you can import the homepage using import homepage from "./index.html" as it's already there
 - Auth: use github oauth middleware
 
 - Simple routing
@@ -21,7 +31,7 @@ The below definition combines technical simplicity with the best features of pre
     - `/` shows `homepage.html` or redirects to `/{username}` if logged in
     - `/{username}/refresh` calculates free (and private if logged in) variants of `dashboard.html/md` and sets them to KV.
 
-- Data source: use https://cache.forgithub.com/stars/{username} and https://cache.forgithub.com/stars/owner/private variant
+- Data source: use https://cache.forgithub.com/repos/{owner} (with or without apikey)
 
 - Separate module: for each repo, check `wrangler.toml/json(c)` to know if it's a worker and to know domain etc. Also parse entrypoint from it and with that, Env details
 
@@ -40,7 +50,6 @@ Frontend: `generateDashboard(username?:string,loggedUsername?:string,data?:any) 
 - If not logged in, login button to verify identity and also get private repos
 - Tabular view with repo name and readme-like buttons
 - Ability to select multiple and then do something with that
-- Ability to group by list
 - Add buttons to:
     - repo on github.com
     - link to fav ide (github.dev/bolt.new)
@@ -59,3 +68,7 @@ Frontend: `generateDashboard(username?:string,loggedUsername?:string,data?:any) 
 # Latest attempts
 
 https://lmpify.com/httpsuithubcomj-zcgo9l0
+
+Refinements needed:
+
+-
