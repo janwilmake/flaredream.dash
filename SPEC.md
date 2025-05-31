@@ -69,4 +69,6 @@ Improvements needed: add openapi context of cache, small details
 
 2 - https://lmpify.com/httpsuithubcomj-6xrqqk0
 
-Improvements needed: the wrangler buttons weren't there and wrangler parse was too hard
+Improvements needed: the wrangler buttons weren't there and wrangler parse was too hard. also i wanted a better tablelike layout
+
+3 - https://lmpify.com/httpsuithubcomj-soetz80

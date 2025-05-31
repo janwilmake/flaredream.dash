@@ -10,6 +10,7 @@ interface Env extends OAuthEnv {
 interface GitHubRepo {
   id: number;
   name: string;
+  full_name: string;
   owner: { login: string; id: number };
   description: string;
   html_url: string;
@@ -237,6 +238,7 @@ async function handleRefresh(
 function generateDashboard(username?: string, loggedUsername?: string, data?: DashboardData): { html: string; markdown: string } {
   const repos = data?.repos || [];
   const hasData = data && data.cache > 0;
+  const isLoggedInAsOwner = loggedUsername === username;
   
   // Generate markdown version
   const markdown = `# ${username}'s Dashboard
@@ -245,24 +247,12 @@ ${!hasData ? 'Loading repositories...' : `Found ${repos.length} repositories`}
 
 ${repos.map(repo => {
   const buttons = [
-    `[GitHub](${repo.html_url})`,
-    `[GitHub.dev](https://github.dev/${repo.owner.login}/${repo.name})`,
-    `[Bolt.new](https://bolt.new/github/${repo.owner.login}/${repo.name})`,
-    `[Lmpify](https://lmpify.com?q=https://uithub.com/${repo.owner.login}/${repo.name})`,
-    `[Copy uithub](https://uithub.com/${repo.owner.login}/${repo.name})`,
-    `[Deploy Template](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=${repo.html_url})`,
-    `[Setup CI](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/workers/provider/github/${repo.owner.login}/${repo.name}/configure)`,
-    `[Manage Worker](https://dash.cloudflare.com/?to=/:account/workers-and-pages/workers/services/view/${repo.name}/production/settings)`,
-    `[View Deployments](https://dash.cloudflare.com/?to=/:account/workers/services/view/${repo.name}/production/deployments)`
+    `[Context](https://uithub.com/${repo.owner.login}/${repo.name})`,
   ];
   
-  return `## ${repo.name}
-${repo.description || 'No description'}
-
-⭐ ${repo.stargazers_count} | 🍴 ${repo.forks_count} | ${repo.language || 'Unknown'} | Updated: ${new Date(repo.updated_at).toLocaleDateString()}
-
+  return `- ${repo.name} - ${repo.description || 'No description'} - ⭐ ${repo.stargazers_count} | 🍴 ${repo.forks_count} | ${repo.language || 'Unknown'} | Updated: ${new Date(repo.updated_at).toLocaleDateString()}
 ${buttons.join(' | ')}`;
-}).join('\n\n')}`;
+}).join('\n')}`;
 
   // Generate HTML version
   const html = `<!DOCTYPE html>
@@ -286,11 +276,12 @@ ${buttons.join(' | ')}`;
             background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a1810 100%);
             min-height: 100vh;
             color: #ffffff;
-            padding: 2rem;
+            padding: 1rem;
+            font-size: 13px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -298,13 +289,13 @@ ${buttons.join(' | ')}`;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
         .header h1 {
-            font-size: 2rem;
+            font-size: 1.5rem;
             background: linear-gradient(135deg, #ff6b35, #f7931e);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -313,20 +304,24 @@ ${buttons.join(' | ')}`;
 
         .header-actions {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.8rem;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 107, 53, 0.3);
-            border-radius: 8px;
+            border-radius: 6px;
             color: #ffffff;
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
         }
 
         .btn:hover {
@@ -340,8 +335,35 @@ ${buttons.join(' | ')}`;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .search-container {
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.6rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #666;
         }
 
         .warning-banner {
@@ -349,67 +371,94 @@ ${buttons.join(' | ')}`;
             border: 1px solid rgba(255, 193, 7, 0.3);
             border-radius: 8px;
             padding: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             display: ${hasData ? 'none' : 'block'};
         }
 
-        .repo-grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .repo-card {
+        .repos-table {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 107, 53, 0.2);
-            border-radius: 16px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        .repo-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 107, 53, 0.4);
-            transform: translateY(-2px);
+        .table-header {
+            display: grid;
+            grid-template-columns: 1fr 2fr 0.8fr 1fr 2fr;
+            background: rgba(255, 107, 53, 0.1);
+            padding: 0.8rem;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .repo-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
+        .repo-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 0.8fr 1fr 2fr;
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+            align-items: center;
+            min-height: 40px;
         }
 
-        .repo-title {
-            font-size: 1.25rem;
+        .repo-row:hover {
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .repo-row:last-child {
+            border-bottom: none;
+        }
+
+        .repo-name {
             font-weight: 600;
             color: #ff6b35;
-            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .repo-description {
+            color: #ccc;
+            font-size: 0.8rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .repo-meta {
             display: flex;
-            gap: 1rem;
-            font-size: 0.85rem;
+            flex-direction: column;
+            gap: 0.2rem;
+            font-size: 0.7rem;
             color: #888;
-            margin-bottom: 1rem;
+        }
+
+        .repo-stats {
+            display: flex;
+            gap: 0.8rem;
+            font-size: 0.7rem;
+            color: #888;
         }
 
         .repo-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.3rem;
         }
 
         .repo-btn {
-            padding: 0.25rem 0.75rem;
+            padding: 0.2rem 0.4rem;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 107, 53, 0.2);
-            border-radius: 6px;
+            border-radius: 4px;
             color: #ffffff;
             text-decoration: none;
-            font-size: 0.8rem;
+            font-size: 0.65rem;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .repo-btn:hover {
@@ -423,23 +472,54 @@ ${buttons.join(' | ')}`;
             color: #888;
         }
 
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ff6b35;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         @media (max-width: 768px) {
             body {
-                padding: 1rem;
+                padding: 0.5rem;
+                font-size: 12px;
             }
             
             .header {
                 flex-direction: column;
                 align-items: flex-start;
             }
+
+            .table-header,
+            .repo-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .table-header > div:not(:first-child),
+            .repo-row > div:not(:first-child) {
+                margin-left: 1rem;
+                font-size: 0.7rem;
+            }
             
             .repo-actions {
-                gap: 0.25rem;
+                gap: 0.2rem;
             }
             
             .repo-btn {
-                font-size: 0.75rem;
-                padding: 0.2rem 0.5rem;
+                font-size: 0.6rem;
+                padding: 0.15rem 0.3rem;
             }
         }
     </style>
@@ -449,14 +529,18 @@ ${buttons.join(' | ')}`;
         <div class="header">
             <h1>${username}'s Dashboard</h1>
             <div class="header-actions">
-                <a href="https://lmpify.com?q=https://flaredream.com/${username} + instructions to output URLs to use as prompt context" class="btn btn-primary">🤖 AI Assistant</a>
-                <button onclick="refreshDashboard()" class="btn">🔄 Refresh</button>
+                <a href="https://lmpify.com?q=https://flaredream.com/${username}\n\nI'm looking to build....Please give me a list of uithub urls that can get me started." class="btn btn-primary">🤖 AI Assistant</a>
+                <button onclick="refreshDashboard()" class="btn" id="refresh-btn">🔄 Refresh</button>
                 ${loggedUsername ? 
                   `<a href="/logout" class="btn">🚪 Logout</a>` : 
                   `<a href="/login?redirect_to=/${username}" class="btn">🔐 Login</a>`
                 }
-                <a href="/" class="btn">🏠 Home</a>
+                ${!isLoggedInAsOwner ? `<a href="/" class="btn">🏠 Home</a>` : ''}
             </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search repositories..." id="search-input">
         </div>
 
         ${!hasData ? `
@@ -465,36 +549,38 @@ ${buttons.join(' | ')}`;
         </div>
         ` : ''}
 
-        <div class="repo-grid">
+        <div class="repos-table">
+            <div class="table-header">
+                <div>Repository</div>
+                <div>Description</div>
+                <div>Stats</div>
+                <div>Meta</div>
+                <div>Actions</div>
+            </div>
             ${repos.length === 0 ? `
             <div class="loading">
                 <p>No repositories found or still loading...</p>
             </div>
             ` : repos.map(repo => `
-            <div class="repo-card">
-                <div class="repo-header">
-                    <div>
-                        <div class="repo-title">${repo.name}</div>
-                        <p>${repo.description || 'No description available'}</p>
-                    </div>
-                </div>
-                <div class="repo-meta">
+            <div class="repo-row" data-searchable="${repo.name.toLowerCase()} ${repo.description?.toLowerCase() || ''} ${repo.language?.toLowerCase() || ''}">
+                <div class="repo-name">${repo.owner.login === username ? repo.name : repo.full_name}</div>
+                <div class="repo-description">${repo.description || 'No description available'}</div>
+                <div class="repo-stats">
                     <span>⭐ ${repo.stargazers_count}</span>
                     <span>🍴 ${repo.forks_count}</span>
-                    <span>${repo.language || 'Unknown'}</span>
-                    <span>Updated: ${new Date(repo.updated_at).toLocaleDateString()}</span>
+                </div>
+                <div class="repo-meta">
+                    <div>${repo.language || 'Unknown'}</div>
+                    <div>${new Date(repo.updated_at).toLocaleDateString()}</div>
                 </div>
                 <div class="repo-actions">
-                    <a href="${repo.html_url}" class="repo-btn" target="_blank">GitHub</a>
-                    <a href="https://github.dev/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">GitHub.dev</a>
-                    <a href="https://bolt.new/github/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">Bolt.new</a>
-                    <a href="https://lmpify.com?q=https://uithub.com/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">Lmpify</a>
-                    <button onclick="copyToClipboard('https://uithub.com/${repo.owner.login}/${repo.name}')" class="repo-btn">Copy uithub</button>
-                    ${repo.homepage ? `<a href="${repo.homepage}" class="repo-btn" target="_blank">Homepage</a>` : ''}
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=${repo.html_url}" class="repo-btn" target="_blank">Deploy Template</a>
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/workers/provider/github/${repo.owner.login}/${repo.name}/configure" class="repo-btn" target="_blank">Setup CI</a>
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/workers/services/view/${repo.name}/production/settings" class="repo-btn" target="_blank">Manage Worker</a>
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers/services/view/${repo.name}/production/deployments" class="repo-btn" target="_blank">View Deployments</a>
+                    <a href="${repo.html_url}" class="repo-btn" target="_blank">GH</a>
+                    <a href="https://github.dev/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">Dev</a>
+                    <a href="https://lmpify.com?q=https://uithub.com/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">AI</a>
+                    ${repo.homepage ? `<a href="${repo.homepage}" class="repo-btn" target="_blank">Home</a>` : ''}
+                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=${repo.html_url}" class="repo-btn" target="_blank">Deploy</a>
+                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/workers/provider/github/${repo.owner.login}/${repo.name}/configure" class="repo-btn" target="_blank">CI</a>
+                    <a href="https://dash.cloudflare.com/?to=/:account/workers/services/view/${repo.name}/production/deployments" class="repo-btn" target="_blank">Logs</a>
                 </div>
             </div>
             `).join('')}
@@ -510,6 +596,11 @@ ${buttons.join(' | ')}`;
         ` : ''}
 
         async function refreshDashboard() {
+            const btn = document.getElementById('refresh-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner"></span> Refreshing...';
+            btn.disabled = true;
+
             try {
                 const response = await fetch('/${username}/refresh');
                 if (response.ok) {
@@ -519,15 +610,40 @@ ${buttons.join(' | ')}`;
                 }
             } catch (error) {
                 alert('Error refreshing dashboard');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                // Could show a toast notification here
                 console.log('Copied to clipboard:', text);
             });
         }
+
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.repo-row[data-searchable]');
+            
+            rows.forEach(row => {
+                const searchData = row.getAttribute('data-searchable');
+                if (searchData.includes(searchTerm)) {
+                    row.classList.remove('hidden');
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+        });
+
+        // Focus search input on key press
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && !e.ctrlKey && !e.metaKey && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                document.getElementById('search-input').focus();
+            }
+        });
     </script>
 </body>
 </html>`;
