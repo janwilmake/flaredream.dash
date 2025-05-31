@@ -54,3 +54,8 @@ Frontend: `generateDashboard(username?:string,loggedUsername?:string,data?:any) 
         - view deployments
         - link to open each binding in cf dashboard
 
+
+
+# Latest attempts
+
+https://lmpify.com/httpsuithubcomj-zcgo9l0
