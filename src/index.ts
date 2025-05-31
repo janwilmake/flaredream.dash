@@ -97,11 +97,11 @@ async function handleDashboard(
     
     const acceptHeader = request.headers.get('Accept') || '';
     const wantsMarkdown = extension === '.md' || 
-      (!extension && acceptHeader.includes('text/markdown'));
+      (!extension && !acceptHeader.includes('text/html'));
     
     return new Response(wantsMarkdown ? markdown : html, {
       headers: { 
-        'Content-Type': wantsMarkdown ? 'text/markdown' : 'text/html',
+        'Content-Type': wantsMarkdown ? 'text/markdown;charset=utf8' : 'text/html;charset=utf8',
         'Cache-Control': 'public, max-age=300'
       }
     });
