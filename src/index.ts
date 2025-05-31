@@ -167,15 +167,13 @@ async function handleRefresh(
       // Store private HTML
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:private:html`,
-        privateFormats.html,
-        { expirationTtl: 3600 }
+        privateFormats.html
       );
       
       // Store private Markdown
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:private:md`,
-        privateFormats.markdown,
-        { expirationTtl: 3600 }
+        privateFormats.markdown
       );
       
       // Generate and store public versions (filter out private repos)
@@ -192,15 +190,13 @@ async function handleRefresh(
       // Store public HTML
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:html`,
-        publicFormats.html,
-        { expirationTtl: 3600 }
+        publicFormats.html
       );
       
       // Store public Markdown
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:md`,
-        publicFormats.markdown,
-        { expirationTtl: 3600 }
+        publicFormats.markdown
       );
     } else {
       // Only store public versions
@@ -216,15 +212,13 @@ async function handleRefresh(
       // Store public HTML
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:html`,
-        publicFormats.html,
-        { expirationTtl: 3600 }
+        publicFormats.html
       );
       
       // Store public Markdown
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:md`,
-        publicFormats.markdown,
-        { expirationTtl: 3600 }
+        publicFormats.markdown
       );
     }
     
