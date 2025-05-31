@@ -15,11 +15,9 @@ The below definition combines technical simplicity with the best features of pre
 
 Context
 
-https://uithub.com/janwilmake/flaredream
 https://uithub.com/janwilmake/github-oauth-middleware
 https://uithub.com/janwilmake/gists/blob/main/named-codeblocks.md
-https://openapisearch.com/openapi/cache.forgithub.com
-
+https://oapis.org/openapi/cache.forgithub.com/getOwnerRepositories
 
 - put all source in the root, no src folder needed
 - you can import the homepage using import homepage from "./index.html" as it's already there
@@ -65,10 +63,13 @@ Frontend: `generateDashboard(username?:string,loggedUsername?:string,data?:any) 
 
 
 
-# Latest attempts
+# Iterations
 
-https://lmpify.com/httpsuithubcomj-zcgo9l0
 
-Refinements needed:
+1 - https://lmpify.com/httpsuithubcomj-zcgo9l0 
 
--
+Improvements needed: add openapi context of cache, small details
+
+2 - https://lmpify.com/httpsuithubcomj-6xrqqk0
+
+
