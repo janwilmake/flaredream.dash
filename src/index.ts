@@ -140,7 +140,7 @@ async function handleRefresh(
   
   try {
     // Fetch data from cache.forgithub.com
-    const apiUrl = new URL(`https://cache.forgithub.com/repos/${username}`);
+    const apiUrl = new URL(`https://cache.forgithub.com/repos/${username}?refresh=true`);
     if (accessToken) {
       apiUrl.searchParams.set('apiKey', accessToken);
     }
@@ -250,7 +250,7 @@ ${repos.map(repo => {
     `[Context](https://uithub.com/${repo.owner.login}/${repo.name})`,
   ];
   
-  return `- ${repo.name} - ${repo.description || 'No description'} - ⭐ ${repo.stargazers_count} | 🍴 ${repo.forks_count} | ${repo.language || 'Unknown'} | Updated: ${new Date(repo.updated_at).toLocaleDateString()}
+  return `- ${repo.name} - ${repo.description || ''} - ⭐ ${repo.stargazers_count} | 🍴 ${repo.forks_count} | ${repo.language || 'Unknown'} | Updated: ${new Date(repo.updated_at).toLocaleDateString()}
 ${buttons.join(' | ')}`;
 }).join('\n')}`;
 
@@ -259,8 +259,30 @@ ${buttons.join(' | ')}`;
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${username}'s Dashboard - Flaredream</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${username}'s Dashboard - Flaredream</title>
+
+<meta name="description" content="Dream it. Prompt it. Ship it. Build and manage apps faster." />
+<meta name="robots" content="index, follow" />
+
+<!-- Facebook Meta Tags -->
+<meta property="og:url" content="https://flaredream.com" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Faster Cloudflare Dashboard - Flaredream" />
+<meta property="og:description" content="Dream it. Prompt it. Ship it. Build and manage apps faster." />
+<meta property="og:image" content="https://quickog.com/screenshot/flaredream.com${data?.username?`/${data.username}`:''}" />
+<meta property="og:image:alt" content="Dream it. Prompt it. Ship it. Build and manage apps faster."/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+
+<!-- Twitter Meta Tags -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta property="twitter:domain" content="flaredream.com" />
+<meta property="twitter:url" content="https://flaredream.com" />
+<meta name="twitter:title" content="Faster Cloudflare Dashboard - Flaredream" />
+<meta name="twitter:description" content="Dream it. Prompt it. Ship it. Build and manage apps faster." />
+<meta name="twitter:image" content="https://quickog.com/screenshot/flaredream.com${data?.username?`/${data.username}`:''}" />
+
     ${hasData ? `<script type="application/json" id="dashboard-data">
     ${JSON.stringify({ cache: data.cache, username: data.username })}
     </script>` : ''}
@@ -564,7 +586,7 @@ ${buttons.join(' | ')}`;
             ` : repos.map(repo => `
             <div class="repo-row" data-searchable="${repo.name.toLowerCase()} ${repo.description?.toLowerCase() || ''} ${repo.language?.toLowerCase() || ''}">
                 <div class="repo-name">${repo.owner.login === username ? repo.name : repo.full_name}</div>
-                <div class="repo-description">${repo.description || 'No description available'}</div>
+                <div class="repo-description">${repo.description || ''}</div>
                 <div class="repo-stats">
                     <span>⭐ ${repo.stargazers_count}</span>
                     <span>🍴 ${repo.forks_count}</span>
