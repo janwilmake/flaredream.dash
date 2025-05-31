@@ -1,9 +1,0 @@
-{
-  "name": "flaredream",
-  "compatibility_date": "2025-05-30",
-  "assets":{"directory":"./"},
-  "routes": [
-    { "pattern": "flaredream.com", "custom_domain": true },
-    { "pattern": "www.flaredream.com", "custom_domain": true }
-  ]
-}

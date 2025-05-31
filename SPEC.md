@@ -35,7 +35,7 @@ Frontend: `generateDashboard(username?:string,loggedUsername?:string,data?:any) 
 - Optionally includes data JSON in head with `{cache,username}`
 - If data isn't present, it calls `/{username}/refresh` and refreshes the window after its done to retrieve the new HTML
 - Button to 'Set to homepage' that can be closed
-- On top: lmpify chat plugin that uses system prompt with https://toolflare.com/{username} and instructions to output URLs to use as prompt context
+- On top: lmpify chat plugin that uses system prompt with https://flaredream.com/{username} and instructions to output URLs to use as prompt context
 - Refresh button to call `/{username}/refresh`
 - If not logged in, login button to verify identity and also get private repos
 - Tabular view with repo name and readme-like buttons

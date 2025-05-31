@@ -1,0 +1,24 @@
+{
+  "name": "flaredream",
+  "version": "1.0.0",
+  "description": "Dream it, Prompt it, Ship it - The better way to ship with Cloudflare",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler build"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "github",
+    "dashboard",
+    "deployment"
+  ],
+  "author": "janwilmake",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "wrangler": "^3.78.12"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "flaredream",
+  "compatibility_date": "2025-01-27",
+  "main": "src/index.ts",
+  "kv_namespaces": [
+    {
+      "binding": "FLAREDREAM_KV",
+      "id": "0f082aa551ae457fa6c8fb6e6d911b64"
+    }
+  ],
+  "routes": [
+    { "pattern": "flaredream.com", "custom_domain": true },
+    { "pattern": "www.flaredream.com", "custom_domain": true }
+  ]
+}
