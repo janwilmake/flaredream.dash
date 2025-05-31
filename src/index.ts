@@ -86,45 +86,45 @@ async function handleDashboard(
   extension: string | undefined,
   currentUser: any
 ): Promise<Response> {
-  const isPrivate = currentUser?.login === username;
-  const cacheKey = `dashboard:${username}:${isPrivate ? 'private' : 'public'}`;
+  const isOwner = currentUser?.login === username;
+  const acceptHeader = request.headers.get('Accept') || '';
   
-  // Try to get cached version
+  // Determine format
+  const wantsMarkdown = extension === '.md' || 
+    (!extension && (acceptHeader.includes('text/markdown') || !acceptHeader.includes('text/html')));
+  
+  // Determine privacy level and format
+  const privacy = isOwner ? 'private' : 'public';
+  const format = wantsMarkdown ? 'md' : 'html';
+  
+  // Try to get pre-generated content from KV
+  const cacheKey = `dashboard:${username}:${privacy}:${format}`;
   const cached = await env.FLAREDREAM_KV.get(cacheKey);
+  
   if (cached) {
-    const data: DashboardData = JSON.parse(cached);
-    const { html, markdown } = generateDashboard(username, currentUser?.login, data);
-    
-    const acceptHeader = request.headers.get('Accept') || '';
-    const wantsMarkdown = extension === '.md' || 
-      (!extension && !acceptHeader.includes('text/html'));
-    
-    return new Response(wantsMarkdown ? markdown : html, {
+    const contentType = wantsMarkdown ? 'text/markdown;charset=utf8' : 'text/html;charset=utf8';
+    return new Response(cached, {
       headers: { 
-        'Content-Type': wantsMarkdown ? 'text/markdown;charset=utf8' : 'text/html;charset=utf8',
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=300'
       }
     });
   }
 
-  // No cached data, return placeholder that will trigger refresh
+  // No cached content, return placeholder that will trigger refresh
   const placeholderData: DashboardData = {
     cache: 0,
     username,
     repos: [],
-    isPrivate
+    isPrivate: isOwner
   };
   
   const { html, markdown } = generateDashboard(username, currentUser?.login, placeholderData);
+  const content = wantsMarkdown ? markdown : html;
+  const contentType = wantsMarkdown ? 'text/markdown' : 'text/html';
   
-  const acceptHeader = request.headers.get('Accept') || '';
-  const wantsMarkdown = extension === '.md' || 
-    (!extension && acceptHeader.includes('text/markdown'));
-  
-  return new Response(wantsMarkdown ? markdown : html, {
-    headers: { 
-      'Content-Type': wantsMarkdown ? 'text/markdown' : 'text/html'
-    }
+  return new Response(content, {
+    headers: { 'Content-Type': contentType }
   });
 }
 
@@ -134,8 +134,8 @@ async function handleRefresh(
   username: string,
   currentUser: any
 ): Promise<Response> {
-  const isPrivate = currentUser?.login === username;
-  const accessToken = isPrivate ? getAccessToken(request) : undefined;
+  const isOwner = currentUser?.login === username;
+  const accessToken = isOwner ? getAccessToken(request) : undefined;
   
   try {
     // Fetch data from cache.forgithub.com
@@ -149,48 +149,81 @@ async function handleRefresh(
       throw new Error(`Failed to fetch repos: ${response.status}`);
     }
     
-    const repos: GitHubRepo[] = await response.json();
+    const allRepos: GitHubRepo[] = await response.json();
     
-    // Store both public and private versions if we have private access
-    if (isPrivate) {
-      // Store private version
+    // Generate and store all 4 format combinations
+    if (isOwner && accessToken) {
+      // Store private versions (with all repos)
       const privateData: DashboardData = {
         cache: Date.now(),
         username,
-        repos,
+        repos: allRepos,
         isPrivate: true
       };
+      
+      const privateFormats = generateDashboard(username, currentUser?.login, privateData);
+      
+      // Store private HTML
       await env.FLAREDREAM_KV.put(
-        `dashboard:${username}:private`,
-        JSON.stringify(privateData),
-        { expirationTtl: 3600 } // 1 hour
+        `dashboard:${username}:private:html`,
+        privateFormats.html,
+        { expirationTtl: 3600 }
       );
       
-      // Store public version (filter out private repos)
-      const publicRepos = repos.filter(repo => !repo.private);
+      // Store private Markdown
+      await env.FLAREDREAM_KV.put(
+        `dashboard:${username}:private:md`,
+        privateFormats.markdown,
+        { expirationTtl: 3600 }
+      );
+      
+      // Generate and store public versions (filter out private repos)
+      const publicRepos = allRepos.filter(repo => !repo.private);
       const publicData: DashboardData = {
         cache: Date.now(),
         username,
         repos: publicRepos,
         isPrivate: false
       };
+      
+      const publicFormats = generateDashboard(username, undefined, publicData);
+      
+      // Store public HTML
       await env.FLAREDREAM_KV.put(
-        `dashboard:${username}:public`,
-        JSON.stringify(publicData),
-        { expirationTtl: 3600 } // 1 hour
+        `dashboard:${username}:public:html`,
+        publicFormats.html,
+        { expirationTtl: 3600 }
+      );
+      
+      // Store public Markdown
+      await env.FLAREDREAM_KV.put(
+        `dashboard:${username}:public:md`,
+        publicFormats.markdown,
+        { expirationTtl: 3600 }
       );
     } else {
-      // Store public version only
+      // Only store public versions
       const publicData: DashboardData = {
         cache: Date.now(),
         username,
-        repos,
+        repos: allRepos, // These should already be public only
         isPrivate: false
       };
+      
+      const publicFormats = generateDashboard(username, undefined, publicData);
+      
+      // Store public HTML
       await env.FLAREDREAM_KV.put(
-        `dashboard:${username}:public`,
-        JSON.stringify(publicData),
-        { expirationTtl: 3600 } // 1 hour
+        `dashboard:${username}:public:html`,
+        publicFormats.html,
+        { expirationTtl: 3600 }
+      );
+      
+      // Store public Markdown
+      await env.FLAREDREAM_KV.put(
+        `dashboard:${username}:public:md`,
+        publicFormats.markdown,
+        { expirationTtl: 3600 }
       );
     }
     
