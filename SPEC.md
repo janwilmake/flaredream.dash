@@ -30,8 +30,7 @@ https://oapis.org/openapi/cache.forgithub.com/getOwnerRepositories
     - `/{username}/refresh` calculates free (and private if logged in) variants of `dashboard.html/md` and sets them to KV.
 
 - Data source: use https://cache.forgithub.com/repos/{owner} (with or without apikey)
-
-- Separate module: for each repo, check `wrangler.toml/json(c)` to know if it's a worker and to know domain etc. Also parse entrypoint from it and with that, Env details
+- If api key is given, returns all repos including private. private repos must be filtered out for the public kv storage
 
 Frontend `homepage.html`
 
@@ -43,23 +42,21 @@ Frontend: `generateDashboard(username?:string,loggedUsername?:string,data?:any) 
 - Optionally includes data JSON in head with `{cache,username}`
 - If data isn't present, it calls `/{username}/refresh` and refreshes the window after its done to retrieve the new HTML
 - Button to 'Set to homepage' that can be closed
-- On top: lmpify chat plugin that uses system prompt with https://flaredream.com/{username} and instructions to output URLs to use as prompt context
+- On top: link to lmpify: https://lmpify.com?q={prompt} with prompt 'https://flaredream.com/{username} + instructions to output URLs to use as prompt context'
 - Refresh button to call `/{username}/refresh`
 - If not logged in, login button to verify identity and also get private repos
 - Tabular view with repo name and readme-like buttons
-- Ability to select multiple and then do something with that
 - Add buttons to:
     - repo on github.com
     - link to fav ide (github.dev/bolt.new)
     - link to fav chat (gitmcp, lmpify, etc)
     - copy link to uithub.com
-    - if wrangler found:
-        - link to open domain
-        - fork and deploy
-        - deploy
-        - configure
-        - view deployments
-        - link to open each binding in cf dashboard
+    - link to homepage
+    - fork and deploy
+    - Create new git repo from template: https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=https://github.com/{owner}/{repo}
+    - Link existing repo to automatic Cloudflare deployment CI: https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/workers/provider/github/{owner}/{repo}/configure
+    - Manage the worker configuration: https://dash.cloudflare.com/?to=/:account/workers-and-pages/workers/services/view/{repo}/production/settings
+    - View deployments: https://dash.cloudflare.com/?to=/:account/workers/services/view/{repo}/production/deployments
 
 
 
@@ -72,4 +69,4 @@ Improvements needed: add openapi context of cache, small details
 
 2 - https://lmpify.com/httpsuithubcomj-6xrqqk0
 
-
+Improvements needed: the wrangler buttons weren't there and wrangler parse was too hard
