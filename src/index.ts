@@ -529,7 +529,7 @@ ${buttons.join(' | ')}`;
         <div class="header">
             <h1>${username}'s Dashboard</h1>
             <div class="header-actions">
-                <a href="https://lmpify.com?q=https://flaredream.com/${username}\n\nI'm looking to build....Please give me a list of uithub urls that can get me started." class="btn btn-primary">🤖 AI Assistant</a>
+                <a href="https://lmpify.com?q=https://flaredream.com/${username}%0A%0AI'm looking to build....%0A%0APlease give me a list of uithub urls that can get me started." class="btn btn-primary">🤖 AI Assistant</a>
                 <button onclick="refreshDashboard()" class="btn" id="refresh-btn">🔄 Refresh</button>
                 ${loggedUsername ? 
                   `<a href="/logout" class="btn">🚪 Logout</a>` : 
