@@ -1,5 +1,11 @@
-import { handleOAuth, getCurrentUser, getAccessToken, type Env as OAuthEnv } from './oauth-middleware';
-import homepage from '../index.html';
+import {
+  handleOAuth,
+  getCurrentUser,
+  getAccessToken,
+  type Env as OAuthEnv,
+} from "./oauth-middleware";
+//@ts-ignore
+import homepage from "../index.html";
 
 interface Env extends OAuthEnv {
   FLAREDREAM_KV: KVNamespace;
@@ -48,24 +54,25 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const currentUser = getCurrentUser(request);
-    
+
     // Root path - show homepage or redirect to user dashboard
-    if (path === '/') {
+    if (path === "/") {
       if (currentUser) {
         return new Response(null, {
           status: 302,
-          headers: { Location: `/${currentUser.login}` }
+          headers: { Location: `/${currentUser.login}` },
         });
       }
       return new Response(homepage, {
-        headers: { 'Content-Type': 'text/html' }
+        headers: { "Content-Type": "text/html" },
       });
     }
 
     // Parse username route
-    const match = path.match(/^\/([^\/]+)(\.html|\.md)?$/);
+    const match = path.match(/^\/([^\/]+?)(\.html|\.md)?$/);
     if (match) {
       const [, username, extension] = match;
+      console.log({ username, extension });
       return handleDashboard(request, env, username, extension, currentUser);
     }
 
@@ -76,39 +83,44 @@ export default {
       return handleRefresh(request, env, username, currentUser);
     }
 
-    return new Response('Not Found', { status: 404 });
+    return new Response("Not Found", { status: 404 });
   },
 };
 
 async function handleDashboard(
-  request: Request, 
-  env: Env, 
-  username: string, 
+  request: Request,
+  env: Env,
+  username: string,
   extension: string | undefined,
-  currentUser: any
+  currentUser: any,
 ): Promise<Response> {
   const isOwner = currentUser?.login === username;
-  const acceptHeader = request.headers.get('Accept') || '';
-  
+  const acceptHeader = request.headers.get("Accept") || "";
+
   // Determine format
-  const wantsMarkdown = extension === '.md' || 
-    (!extension && (acceptHeader.includes('text/markdown') || !acceptHeader.includes('text/html')));
-  
+  const wantsMarkdown =
+    extension === ".md" ||
+    (!extension &&
+      (acceptHeader.includes("text/markdown") ||
+        !acceptHeader.includes("text/html")));
+
   // Determine privacy level and format
-  const privacy = isOwner ? 'private' : 'public';
-  const format = wantsMarkdown ? 'md' : 'html';
-  
+  const privacy = isOwner ? "private" : "public";
+  const format = wantsMarkdown ? "md" : "html";
+
   // Try to get pre-generated content from KV
   const cacheKey = `dashboard:${username}:${privacy}:${format}`;
   const cached = await env.FLAREDREAM_KV.get(cacheKey);
-  
+
   if (cached) {
-    const contentType = wantsMarkdown ? 'text/markdown;charset=utf8' : 'text/html;charset=utf8';
+    const contentType = wantsMarkdown
+      ? "text/markdown;charset=utf8"
+      : "text/html;charset=utf8";
     return new Response(cached, {
-      headers: { 
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=300'
-      }
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=300",
+      },
     });
   }
 
@@ -117,15 +129,19 @@ async function handleDashboard(
     cache: 0,
     username,
     repos: [],
-    isPrivate: isOwner
+    isPrivate: isOwner,
   };
-  
-  const { html, markdown } = generateDashboard(username, currentUser?.login, placeholderData);
+
+  const { html, markdown } = generateDashboard(
+    username,
+    currentUser?.login,
+    placeholderData,
+  );
   const content = wantsMarkdown ? markdown : html;
-  const contentType = wantsMarkdown ? 'text/markdown' : 'text/html';
-  
+  const contentType = wantsMarkdown ? "text/markdown" : "text/html";
+
   return new Response(content, {
-    headers: { 'Content-Type': contentType }
+    headers: { "Content-Type": contentType },
   });
 }
 
@@ -133,25 +149,27 @@ async function handleRefresh(
   request: Request,
   env: Env,
   username: string,
-  currentUser: any
+  currentUser: any,
 ): Promise<Response> {
   const isOwner = currentUser?.login === username;
   const accessToken = isOwner ? getAccessToken(request) : undefined;
-  
+
   try {
     // Fetch data from cache.forgithub.com
-    const apiUrl = new URL(`https://cache.forgithub.com/repos/${username}?refresh=true`);
+    const apiUrl = new URL(
+      `https://cache.forgithub.com/repos/${username}?refresh=true`,
+    );
     if (accessToken) {
-      apiUrl.searchParams.set('apiKey', accessToken);
+      apiUrl.searchParams.set("apiKey", accessToken);
     }
-    
+
     const response = await fetch(apiUrl.toString());
     if (!response.ok) {
       throw new Error(`Failed to fetch repos: ${response.status}`);
     }
-    
+
     const allRepos: GitHubRepo[] = await response.json();
-    
+
     // Generate and store all 4 format combinations
     if (isOwner && accessToken) {
       // Store private versions (with all repos)
@@ -159,44 +177,48 @@ async function handleRefresh(
         cache: Date.now(),
         username,
         repos: allRepos,
-        isPrivate: true
+        isPrivate: true,
       };
-      
-      const privateFormats = generateDashboard(username, currentUser?.login, privateData);
-      
+
+      const privateFormats = generateDashboard(
+        username,
+        currentUser?.login,
+        privateData,
+      );
+
       // Store private HTML
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:private:html`,
-        privateFormats.html
+        privateFormats.html,
       );
-      
+
       // Store private Markdown
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:private:md`,
-        privateFormats.markdown
+        privateFormats.markdown,
       );
-      
+
       // Generate and store public versions (filter out private repos)
-      const publicRepos = allRepos.filter(repo => !repo.private);
+      const publicRepos = allRepos.filter((repo) => !repo.private);
       const publicData: DashboardData = {
         cache: Date.now(),
         username,
         repos: publicRepos,
-        isPrivate: false
+        isPrivate: false,
       };
-      
+
       const publicFormats = generateDashboard(username, undefined, publicData);
-      
+
       // Store public HTML
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:html`,
-        publicFormats.html
+        publicFormats.html,
       );
-      
+
       // Store public Markdown
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:md`,
-        publicFormats.markdown
+        publicFormats.markdown,
       );
     } else {
       // Only store public versions
@@ -204,49 +226,59 @@ async function handleRefresh(
         cache: Date.now(),
         username,
         repos: allRepos, // These should already be public only
-        isPrivate: false
+        isPrivate: false,
       };
-      
+
       const publicFormats = generateDashboard(username, undefined, publicData);
-      
+
       // Store public HTML
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:html`,
-        publicFormats.html
+        publicFormats.html,
       );
-      
+
       // Store public Markdown
       await env.FLAREDREAM_KV.put(
         `dashboard:${username}:public:md`,
-        publicFormats.markdown
+        publicFormats.markdown,
       );
     }
-    
-    return new Response('OK', { status: 200 });
+
+    return new Response("OK", { status: 200 });
   } catch (error) {
-    console.error('Refresh error:', error);
-    return new Response('Failed to refresh data', { status: 500 });
+    console.error("Refresh error:", error);
+    return new Response("Failed to refresh data", { status: 500 });
   }
 }
 
-function generateDashboard(username?: string, loggedUsername?: string, data?: DashboardData): { html: string; markdown: string } {
+function generateDashboard(
+  username?: string,
+  loggedUsername?: string,
+  data?: DashboardData,
+): { html: string; markdown: string } {
   const repos = data?.repos || [];
   const hasData = data && data.cache > 0;
   const isLoggedInAsOwner = loggedUsername === username;
-  
+
   // Generate markdown version
   const markdown = `# ${username}'s Dashboard
 
-${!hasData ? 'Loading repositories...' : `Found ${repos.length} repositories`}
+${!hasData ? "Loading repositories..." : `Found ${repos.length} repositories`}
 
-${repos.map(repo => {
-  const buttons = [
-    `[Context](https://uithub.com/${repo.owner.login}/${repo.name})`,
-  ];
-  
-  return `- ${repo.name} - ${repo.description || ''} - ⭐ ${repo.stargazers_count} | 🍴 ${repo.forks_count} | ${repo.language || 'Unknown'} | Updated: ${new Date(repo.updated_at).toLocaleDateString()}
-${buttons.join(' | ')}`;
-}).join('\n')}`;
+${repos
+  .map((repo) => {
+    const buttons = [
+      `[Context](https://uithub.com/${repo.owner.login}/${repo.name})`,
+    ];
+
+    return `- ${repo.name} - ${repo.description || ""} - ⭐ ${
+      repo.stargazers_count
+    } | 🍴 ${repo.forks_count} | ${
+      repo.language || "Unknown"
+    } | Updated: ${new Date(repo.updated_at).toLocaleDateString()}
+${buttons.join(" | ")}`;
+  })
+  .join("\n")}`;
 
   // Generate HTML version
   const html = `<!DOCTYPE html>
@@ -264,7 +296,9 @@ ${buttons.join(' | ')}`;
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Faster Cloudflare Dashboard - Flaredream" />
 <meta property="og:description" content="Dream it. Prompt it. Ship it. Build and manage apps faster." />
-<meta property="og:image" content="https://quickog.com/screenshot/flaredream.com${data?.username?`/${data.username}`:''}" />
+<meta property="og:image" content="https://quickog.com/screenshot/flaredream.com${
+    data?.username ? `/${data.username}` : ""
+  }" />
 <meta property="og:image:alt" content="Dream it. Prompt it. Ship it. Build and manage apps faster."/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
@@ -275,11 +309,17 @@ ${buttons.join(' | ')}`;
 <meta property="twitter:url" content="https://flaredream.com" />
 <meta name="twitter:title" content="Faster Cloudflare Dashboard - Flaredream" />
 <meta name="twitter:description" content="Dream it. Prompt it. Ship it. Build and manage apps faster." />
-<meta name="twitter:image" content="https://quickog.com/screenshot/flaredream.com${data?.username?`/${data.username}`:''}" />
+<meta name="twitter:image" content="https://quickog.com/screenshot/flaredream.com${
+    data?.username ? `/${data.username}` : ""
+  }" />
 
-    ${hasData ? `<script type="application/json" id="dashboard-data">
+    ${
+      hasData
+        ? `<script type="application/json" id="dashboard-data">
     ${JSON.stringify({ cache: data.cache, username: data.username })}
-    </script>` : ''}
+    </script>`
+        : ""
+    }
     <style>
         * {
             margin: 0;
@@ -388,7 +428,7 @@ ${buttons.join(' | ')}`;
             border-radius: 8px;
             padding: 1rem;
             margin-bottom: 1rem;
-            display: ${hasData ? 'none' : 'block'};
+            display: ${hasData ? "none" : "block"};
         }
 
         .repos-table {
@@ -547,11 +587,16 @@ ${buttons.join(' | ')}`;
             <div class="header-actions">
                 <a href="https://lmpify.com?q=https://flaredream.com/${username}%0A%0AI'm looking to build....%0A%0APlease give me a list of uithub urls that can get me started." class="btn btn-primary">🤖 AI Assistant</a>
                 <button onclick="refreshDashboard()" class="btn" id="refresh-btn">🔄 Refresh</button>
-                ${loggedUsername ? 
-                  `<a href="/logout" class="btn">🚪 Logout</a>` : 
-                  `<a href="/login?redirect_to=/${username}" class="btn">🔐 Login</a>`
+                ${
+                  loggedUsername
+                    ? `<a href="/logout" class="btn">🚪 Logout</a>`
+                    : `<a href="/login?redirect_to=/${username}" class="btn">🔐 Login</a>`
                 }
-                ${!isLoggedInAsOwner ? `<a href="/" class="btn">🏠 Home</a>` : ''}
+                ${
+                  !isLoggedInAsOwner
+                    ? `<a href="/" class="btn">🏠 Home</a>`
+                    : ""
+                }
             </div>
         </div>
 
@@ -559,11 +604,15 @@ ${buttons.join(' | ')}`;
             <input type="text" class="search-input" placeholder="Search repositories..." id="search-input">
         </div>
 
-        ${!hasData ? `
+        ${
+          !hasData
+            ? `
         <div class="warning-banner">
             <strong>⚠️ Loading repositories...</strong> This may take a moment.
         </div>
-        ` : ''}
+        `
+            : ""
+        }
 
         <div class="repos-table">
             <div class="table-header">
@@ -573,43 +622,77 @@ ${buttons.join(' | ')}`;
                 <div>Meta</div>
                 <div>Actions</div>
             </div>
-            ${repos.length === 0 ? `
+            ${
+              repos.length === 0
+                ? `
             <div class="loading">
                 <p>No repositories found or still loading...</p>
             </div>
-            ` : repos.map(repo => `
-            <div class="repo-row" data-searchable="${repo.name.toLowerCase()} ${repo.description?.toLowerCase() || ''} ${repo.language?.toLowerCase() || ''}">
-                <div class="repo-name">${repo.owner.login === username ? repo.name : repo.full_name}</div>
-                <div class="repo-description">${repo.description || ''}</div>
+            `
+                : repos
+                    .map(
+                      (repo) => `
+            <div class="repo-row" data-searchable="${repo.name.toLowerCase()} ${
+                        repo.description?.toLowerCase() || ""
+                      } ${repo.language?.toLowerCase() || ""}">
+                <div class="repo-name">${
+                  repo.owner.login === username ? repo.name : repo.full_name
+                }</div>
+                <div class="repo-description">${repo.description || ""}</div>
                 <div class="repo-stats">
                     <span>⭐ ${repo.stargazers_count}</span>
                     <span>🍴 ${repo.forks_count}</span>
                 </div>
                 <div class="repo-meta">
-                    <div>${repo.language || 'Unknown'}</div>
+                    <div>${repo.language || "Unknown"}</div>
                     <div>${new Date(repo.updated_at).toLocaleDateString()}</div>
                 </div>
                 <div class="repo-actions">
-                    <a href="${repo.html_url}" class="repo-btn" target="_blank">GH</a>
-                    <a href="https://github.dev/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">Dev</a>
-                    <a href="https://lmpify.com?q=https://uithub.com/${repo.owner.login}/${repo.name}" class="repo-btn" target="_blank">AI</a>
-                    ${repo.homepage ? `<a href="${repo.homepage}" class="repo-btn" target="_blank">Home</a>` : ''}
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=${repo.html_url}" class="repo-btn" target="_blank">Deploy</a>
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/workers/provider/github/${repo.owner.login}/${repo.name}/configure" class="repo-btn" target="_blank">CI</a>
-                    <a href="https://dash.cloudflare.com/?to=/:account/workers/services/view/${repo.name}/production/deployments" class="repo-btn" target="_blank">Logs</a>
+                    <a href="${
+                      repo.html_url
+                    }" class="repo-btn" target="_blank">GH</a>
+                    <a href="https://github.dev/${repo.owner.login}/${
+                        repo.name
+                      }" class="repo-btn" target="_blank">Dev</a>
+                    <a href="https://lmpify.com?q=https://uithub.com/${
+                      repo.owner.login
+                    }/${repo.name}" class="repo-btn" target="_blank">AI</a>
+                    ${
+                      repo.homepage
+                        ? `<a href="${repo.homepage}" class="repo-btn" target="_blank">Home</a>`
+                        : ""
+                    }
+                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/deploy-to-workers&repository=${
+                      repo.html_url
+                    }" class="repo-btn" target="_blank">Deploy</a>
+                    <a href="https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/workers/provider/github/${
+                      repo.owner.login
+                    }/${
+                        repo.name
+                      }/configure" class="repo-btn" target="_blank">CI</a>
+                    <a href="https://dash.cloudflare.com/?to=/:account/workers/services/view/${
+                      repo.name
+                    }/production/deployments" class="repo-btn" target="_blank">Logs</a>
                 </div>
             </div>
-            `).join('')}
+            `,
+                    )
+                    .join("")
+            }
         </div>
     </div>
 
     <script>
-        ${!hasData ? `
+        ${
+          !hasData
+            ? `
         // Auto-refresh if no data
         setTimeout(() => {
             refreshDashboard();
         }, 1000);
-        ` : ''}
+        `
+            : ""
+        }
 
         async function refreshDashboard() {
             const btn = document.getElementById('refresh-btn');
