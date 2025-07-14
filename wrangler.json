@@ -8,8 +8,5 @@
       "id": "0f082aa551ae457fa6c8fb6e6d911b64"
     }
   ],
-  "routes": [
-    { "pattern": "flaredream.com", "custom_domain": true },
-    { "pattern": "www.flaredream.com", "custom_domain": true }
-  ]
+  "routes": [{ "pattern": "db.flaredream.com", "custom_domain": true }]
 }
